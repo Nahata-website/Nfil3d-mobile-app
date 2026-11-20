@@ -13,6 +13,9 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
 
+import SplashScreen from './src/components/SplashScreen';
+import WelcomeConsentModal from './src/screens/WelcomeConsentModal';
+import HomeScreen from './src/screens/HomeScreen';
 import MakerWorldScreen from './src/screens/MakerWorldScreen';
 import DevicesScreen from './src/screens/DevicesScreen';
 import ShopScreen from './src/screens/ShopScreen';
@@ -20,14 +23,15 @@ import MeScreen from './src/screens/MeScreen';
 import CartScreen from './src/screens/CartScreen';
 import SideDrawerModal from './src/components/SideDrawerModal';
 import AuthModal from './src/components/AuthModal';
-import SplashScreen from './src/components/SplashScreen';
 
 export default function App() {
-  const [isSplashVisible, setIsSplashVisible] = useState(true);
-  const [currentTab, setCurrentTab] = useState('models'); // 'models' | 'devices' | 'store' | 'me'
+  const [showSplash, setShowSplash] = useState(true);
+  const [showConsent, setShowConsent] = useState(false);
+  const [currentTab, setCurrentTab] = useState('home'); // 'home' | 'store' | 'models' | 'printers' | 'account'
   const [isBagModalOpen, setIsBagModalOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [user, setUser] = useState(null);
 
   const [cart, setCart] = useState([
     {
@@ -92,13 +96,18 @@ export default function App() {
 
   return (
     <View style={styles.outerCanvas}>
-      <StatusBar style="dark" />
-      <View style={[styles.appContainer, isDesktop && styles.desktopFramedContainer]}>
-        {/* Animated App Splash Screen on Launch */}
-        {isSplashVisible && (
-          <SplashScreen onFinish={() => setIsSplashVisible(false)} />
-        )}
+      <StatusBar style={showSplash ? 'light' : 'dark'} />
 
+      {/* 1. Animated Video Splash Screen (Page 1) */}
+      {showSplash && (
+        <SplashScreen
+          onFinish={() => {
+            setShowSplash(false);
+          }}
+        />
+      )}
+
+      <View style={[styles.appContainer, isDesktop && styles.desktopFramedContainer]}>
         {/* Floating Top Bag Shortcut */}
         <TouchableOpacity
           style={styles.floatingBagPill}
@@ -111,39 +120,96 @@ export default function App() {
 
         {/* Screen Content */}
         <View style={styles.screenContent}>
-          {currentTab === 'models' && (
-            <MakerWorldScreen
-              onOpenDrawer={() => setIsDrawerOpen(true)}
-              onStartPrintJob={() => setCurrentTab('devices')}
+          {/* TAB 1: Home (Page 5) */}
+          {currentTab === 'home' && (
+            <HomeScreen
+              onNavigateToModels={(cat) => setCurrentTab('models')}
+              onNavigateToStore={() => setCurrentTab('store')}
+              onOpenNotifications={() => {}}
             />
           )}
 
-          {currentTab === 'devices' && (
-            <DevicesScreen onNavigateToStore={() => setCurrentTab('store')} />
-          )}
-
+          {/* TAB 2: Store (Official NFIL3D Products) */}
           {currentTab === 'store' && (
             <ShopScreen onAddToCart={addToCart} cartItems={cart} />
           )}
 
-          {currentTab === 'me' && (
+          {/* TAB 3: Models (Pages 6 & 10) */}
+          {currentTab === 'models' && (
+            <MakerWorldScreen
+              onOpenDrawer={() => setIsDrawerOpen(true)}
+              onStartPrintJob={() => setCurrentTab('printers')}
+            />
+          )}
+
+          {/* TAB 4: Printers (Pages 7 & 9) */}
+          {currentTab === 'printers' && (
+            <DevicesScreen onNavigateToStore={() => setCurrentTab('store')} />
+          )}
+
+          {/* TAB 5: Account (Page 8) */}
+          {currentTab === 'account' && (
             <MeScreen
               onOpenStore={() => setCurrentTab('store')}
               onOpenAuth={() => setIsAuthOpen(true)}
+              onNavigateToPrinters={() => setCurrentTab('printers')}
+              user={user}
             />
           )}
         </View>
 
-        {/* Apple Minimal Tab Bar */}
+        {/* 5-Item Apple Minimal Tab Bar matching Step 6 & PDF */}
         <View style={styles.appleTabBar}>
-          {/* 1. Models (MakerWorld) */}
+          {/* 1. Home */}
+          <TouchableOpacity
+            style={styles.tabItem}
+            activeOpacity={0.7}
+            onPress={() => setCurrentTab('home')}
+          >
+            <Ionicons
+              name={currentTab === 'home' ? 'home' : 'home-outline'}
+              size={22}
+              color={currentTab === 'home' ? '#FF6A00' : '#8E8E93'}
+            />
+            <Text
+              style={[
+                styles.tabLabel,
+                currentTab === 'home' && styles.tabLabelActive,
+              ]}
+            >
+              Home
+            </Text>
+          </TouchableOpacity>
+
+          {/* 2. Store */}
+          <TouchableOpacity
+            style={styles.tabItem}
+            activeOpacity={0.7}
+            onPress={() => setCurrentTab('store')}
+          >
+            <Ionicons
+              name={currentTab === 'store' ? 'bag-handle' : 'bag-handle-outline'}
+              size={22}
+              color={currentTab === 'store' ? '#FF6A00' : '#8E8E93'}
+            />
+            <Text
+              style={[
+                styles.tabLabel,
+                currentTab === 'store' && styles.tabLabelActive,
+              ]}
+            >
+              Store
+            </Text>
+          </TouchableOpacity>
+
+          {/* 3. Models */}
           <TouchableOpacity
             style={styles.tabItem}
             activeOpacity={0.7}
             onPress={() => setCurrentTab('models')}
           >
             <Ionicons
-              name={currentTab === 'models' ? 'grid' : 'grid-outline'}
+              name={currentTab === 'models' ? 'cube' : 'cube-outline'}
               size={22}
               color={currentTab === 'models' ? '#FF6A00' : '#8E8E93'}
             />
@@ -157,66 +223,45 @@ export default function App() {
             </Text>
           </TouchableOpacity>
 
-          {/* 2. Devices (Printers & Live Camera) */}
+          {/* 4. Printers */}
           <TouchableOpacity
             style={styles.tabItem}
             activeOpacity={0.7}
-            onPress={() => setCurrentTab('devices')}
+            onPress={() => setCurrentTab('printers')}
           >
             <Ionicons
-              name={currentTab === 'devices' ? 'hardware-chip' : 'hardware-chip-outline'}
-              size={23}
-              color={currentTab === 'devices' ? '#FF6A00' : '#8E8E93'}
-            />
-            <Text
-              style={[
-                styles.tabLabel,
-                currentTab === 'devices' && styles.tabLabelActive,
-              ]}
-            >
-              Devices
-            </Text>
-          </TouchableOpacity>
-
-          {/* 3. Official Store */}
-          <TouchableOpacity
-            style={styles.tabItem}
-            activeOpacity={0.7}
-            onPress={() => setCurrentTab('store')}
-          >
-            <Ionicons
-              name={currentTab === 'store' ? 'cart' : 'cart-outline'}
-              size={23}
-              color={currentTab === 'store' ? '#FF6A00' : '#8E8E93'}
-            />
-            <Text
-              style={[
-                styles.tabLabel,
-                currentTab === 'store' && styles.tabLabelActive,
-              ]}
-            >
-              Store
-            </Text>
-          </TouchableOpacity>
-
-          {/* 4. Me (User Hub & Filament Library) */}
-          <TouchableOpacity
-            style={styles.tabItem}
-            activeOpacity={0.7}
-            onPress={() => setCurrentTab('me')}
-          >
-            <Ionicons
-              name={currentTab === 'me' ? 'person' : 'person-outline'}
+              name={currentTab === 'printers' ? 'print' : 'print-outline'}
               size={22}
-              color={currentTab === 'me' ? '#FF6A00' : '#8E8E93'}
+              color={currentTab === 'printers' ? '#FF6A00' : '#8E8E93'}
             />
             <Text
               style={[
                 styles.tabLabel,
-                currentTab === 'me' && styles.tabLabelActive,
+                currentTab === 'printers' && styles.tabLabelActive,
               ]}
             >
-              Me
+              Printers
+            </Text>
+          </TouchableOpacity>
+
+          {/* 5. Account */}
+          <TouchableOpacity
+            style={styles.tabItem}
+            activeOpacity={0.7}
+            onPress={() => setCurrentTab('account')}
+          >
+            <Ionicons
+              name={currentTab === 'account' ? 'person' : 'person-outline'}
+              size={22}
+              color={currentTab === 'account' ? '#FF6A00' : '#8E8E93'}
+            />
+            <Text
+              style={[
+                styles.tabLabel,
+                currentTab === 'account' && styles.tabLabelActive,
+              ]}
+            >
+              Account
             </Text>
           </TouchableOpacity>
         </View>
@@ -227,17 +272,24 @@ export default function App() {
           onClose={() => setIsDrawerOpen(false)}
           onSelectOption={(opt) => {
             if (opt === 'makerlab') setCurrentTab('models');
-            if (opt === 'history') setCurrentTab('me');
+            if (opt === 'history') setCurrentTab('account');
           }}
         />
 
-        {/* Auth / Onboarding Modal */}
+        {/* Auth Modal (Pages 3 & 4) */}
         <AuthModal
           visible={isAuthOpen}
           onClose={() => setIsAuthOpen(false)}
           onSuccessLogin={(email) => {
-            // Logged in
+            setUser({ email, name: email.split('@')[0] });
           }}
+        />
+
+        {/* Welcome & Consent Modal (Page 2) */}
+        <WelcomeConsentModal
+          visible={showConsent}
+          onContinue={() => setShowConsent(false)}
+          onNotNow={() => setShowConsent(false)}
         />
 
         {/* Slide-Up Bag / Checkout Modal */}
@@ -265,6 +317,10 @@ export default function App() {
                 onRemove={removeFromCart}
                 onClearCart={clearCart}
                 onClose={() => setIsBagModalOpen(false)}
+                onExplore={() => {
+                  setIsBagModalOpen(false);
+                  setCurrentTab('store');
+                }}
               />
             </View>
           </View>
@@ -342,7 +398,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 4,
-    minWidth: 64,
+    minWidth: 58,
   },
   tabLabel: {
     fontFamily: 'SF-Pro, -apple-system',
